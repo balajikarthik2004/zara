@@ -1,14 +1,20 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-let apiKey = "AIzaSyC112Zs8y0wxYky395P-QcxREQjfAEzeuc";
+// Fetch the API key from the environment variable
+const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 let model;
 
-function initializeModel() {
-  const genai = new GoogleGenerativeAI(apiKey);
+function getAPIKey() {
+  // Remove the prompt as we now use the environment variable for API key
+  if (apiKey == null || apiKey == "") {
+    showError("API key not found. Please provide a valid API key.");
+    return;
+  }
+  let genai = new GoogleGenerativeAI(apiKey);
   model = genai.getGenerativeModel({ model: "gemini-pro" });
 }
 
-initializeModel();
+getAPIKey();
 
 const sentMessageBtn = document.querySelector(".msger-send-btn");
 const messageInputArea = document.querySelector(".msger-input");
@@ -26,10 +32,10 @@ function convertMarkdownToHTML(markdownText) {
   return markdownText;
 }
 
-let chatHistory = [
+let chatHistory =  [
   {
     role: "user",
-    parts: [{ text: "Act as a friendly assistant of user who give answer in short and concise manner. User don't like answer exceeding 2 to 3 lines paragraphs. So you should give answer within 2 to 3 line paragraphs. For each answer keep this in mind and then give reply in 2 to 3 line paragraphs .  ok?" }],
+    parts: [{ text: "Act as a friendly assistant of user who give answer in short and concise manner. User don't like answer exceeding 2 to 3 lines paragraphs. So you should give answer within 2 to 3 lines paragraphs. For each answer keep this in mind and then give reply in 2 to 3 line paragraphs .  ok?" }],
   },
   {
     role: "model",
@@ -79,48 +85,35 @@ function makeMsgID() {
 
 function makeUserMessageHTML(msg) {
   return `<div class="msg right-msg user-${makeMsgID()}">
-  <div
-   class="msg-img"
-  ></div>
-
+  <div class="msg-img"></div>
   <div class="msg-bubble">
     <div class="msg-info">
       <div class="msg-info-name">User</div>
       <div class="msg-info-time">${getTime()}</div>
     </div>
-
-    <div class="msg-text">
-      ${msg}
-    </div>
+    <div class="msg-text">${msg}</div>
   </div>
 </div>`;
 }
 
 function makeAIMessageHTML(id) {
   return `<div class="msg left-msg ai-${id}">
-  <div
-   class="msg-img"
-  ></div>
-
+  <div class="msg-img"></div>
   <div class="msg-bubble">
     <div class="msg-info">
       <div class="msg-info-name">Assistant</div>
       <div class="msg-info-time">${getTime()}</div>
     </div>
-
     <div class="loader show"></div>
-    <div class="msg-text hide">
-    </div>
+    <div class="msg-text hide"></div>
   </div>
-</div>
-`;
+</div>`;
 }
 
 async function generateAIMessage(ele, userMsg = "") {
   const aiMessageEle = ele.querySelector(".msg-text");
   const loaderEle = ele.querySelector(".loader");
   let text;
-
   try {
     const chat = model.startChat({
       history: chatHistory,
@@ -133,12 +126,17 @@ async function generateAIMessage(ele, userMsg = "") {
     const response = await result.response;
     text = response.text();
     if (text == "") {
-      chatHistory[chatHistory.length - 1]?.parts.push({ text: "Apologies, but the response exceeds the maximum token limit." });
-      text = "Apologies, but the response exceeds the maximum token limit.";
+      chatHistory[chatHistory.length - 1]?.parts.push({
+        text: "Apologies, but the response exceeds the maximum token limit of 200 set by Manik (the developer).",
+      });
+      text = "Apologies, but the response exceeds the maximum token limit of 200 set by Manik (the developer).";
     }
   } catch (err) {
-    text = "Please check your API key or internet connection.";
-    console.error(err);
+    text = "Please check your API key or internet connection and re-enter the Gemini API key. The page will reload in 4 seconds.";
+    localStorage.removeItem("apiKey");
+    setTimeout(() => {
+      window.location.reload();
+    }, 6000);
   }
 
   aiMessageEle.innerHTML = convertMarkdownToHTML(text);
