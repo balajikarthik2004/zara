@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-let apiKey = "AIzaSyC112Zs8y0wxYky395P-QcxREQjfAEzeuc";
+let apiKey = "Your API key";
 let model;
 
 function initializeModel() {
